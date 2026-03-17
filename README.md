@@ -1,19 +1,20 @@
 ## Protokoll: DEZSYS_GK81_WAREHOUSE_ORM & AI Prediction
     
-    Name: Elyesa Imamoglu
-    Klasse: 4CHIT
-    Datum: 16. März 2026
+Name: Elyesa Imamoglu
+Klasse: 4CHIT
+Datum: 16. März 2026
 
 ## Einleitung
    
-    Dieses Projekt demonstriert die Implementierung eines Data-Warehouse-Systems mit Java Spring Boot. Der Fokus liegt auf Object-Relational Mapping (ORM) mittels JPA/Hibernate, der Verwaltung von Relationen zwischen Entitäten und der Erweiterung des Systems um eine künstliche Intelligenz (LLM) zur Absatzprognose.
+Dieses Projekt demonstriert die Implementierung eines Data-Warehouse-Systems mit Java Spring Boot. Der Fokus liegt auf Object-Relational Mapping (ORM) mittels JPA/Hibernate, der Verwaltung von Relationen zwischen Entitäten und der Erweiterung des Systems um eine künstliche Intelligenz (LLM) zur Absatzprognose.
 
 ## Anforderungen (Requirements)
 
-    Java SDK: 18 oder höher
-    Build-Tool: Gradle 8+
-    Datenbank: MySQL
-    KI-Backend: Ollama mit dem Modell phi3 (Docker Container)
+Java SDK: 18 oder höher 
+Build-Tool: Gradle 8+ 
+Datenbank: MySQL 
+KI-Backend: Ollama mit dem Modell phi3 (Docker Container)
+
 ## Wichtige Codebloecke
 
 #### Grundlagen: Das User-Beispiel (Tutorial-Teil)
