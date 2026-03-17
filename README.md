@@ -1,103 +1,249 @@
-# DEZSYS_GK81_WAREHOUSE_ORM
+## Protokoll: DEZSYS_GK81_WAREHOUSE_ORM & AI Prediction
+    
+    Name: Elyesa Imamoglu
+    Klasse: 4CHIT
+    Datum: 16. März 2026
 
-Join GitHub Repo: https://github.com/ThomasMicheler/DEZSYS_GK862_DATAWAREHOUSE_ORM.git
+## Einleitung
    
-This lesson introduces the data accessing model in Spring and the basics of Object Relational Mapping (ORM).
+    Dieses Projekt demonstriert die Implementierung eines Data-Warehouse-Systems mit Java Spring Boot. Der Fokus liegt auf Object-Relational Mapping (ORM) mittels JPA/Hibernate, der Verwaltung von Relationen zwischen Entitäten und der Erweiterung des Systems um eine künstliche Intelligenz (LLM) zur Absatzprognose.
 
-## Introduction
+## Anforderungen (Requirements)
 
-This exercise is intended to demonstrate the interaction between a programming language (Java) and a persistance layer (MySQL, PostgreSQL).
+    Java SDK: 18 oder höher
+    Build-Tool: Gradle 8+
+    Datenbank: MySQL
+    KI-Backend: Ollama mit dem Modell phi3 (Docker Container)
+## Wichtige Codebloecke
 
-First you should follow the Spring tutorial ["Accessing data with MySQL"](https://spring.io/guides/gs/accessing-data-mysql) and document all important steps in your protocol. Don't forget to make notes about all problems occured during the setup. Afterwards you should extend the data model of the example and adapt it for a Data Warehouse application (data structure see below). One relation between the entities Datawarehouse and Products is required in this example. Please read the documentation how you implementation entity relations using the ORM model.
+#### Grundlagen: Das User-Beispiel (Tutorial-Teil)
+In diesem Schritt wurde das initiale Tutorial "Accessing data with MySQL" implementiert.
 
-Document all individual implementation steps and any problems that arise in a log (Markdown).  
-Create a GITHUB repository for this project and add the link to it in the comments.
-
-## Requirements
-
-*   MySQL DMS
-     *  Local MySQL Service   
-     *  MySQL Docker Container
-*   Gradle 8 or higher  
-*   Java SDK 18 or higher  
-     
-## Data Structure - Data Warehouse
+**Entity: User.java**
+```java
+@Entity 
+public class User {
+    @Id
+    @GeneratedValue(strategy=GenerationType.AUTO)
+    private Integer id;
+    private String name;
+    private String email;
+    // Getter und Setter...
+}
 ```
-<warehouseData>
-    <warehouseID>001</warehouseID>
-    <warehouseName>Linz Bahnhof</warehouseName>
-    <warehouseAddress>Bahnhofsstrasse 27/9</warehouseAddress>
-    <warehousePostalCode>Linz</warehousePostalCode>
-    <warehouseCity>Linz</warehouseCity>
-    <warehouseCountry>Austria</warehouseCountry>
-    <timestamp>2021-09-12 08:52:39.077</timestamp>
-    <productData>
-         <product>
-             <productID>00-443175</productID>
-             <productName>Bio Orangensaft Sonne</productName>
-             <productCategory>Getraenk</productCategory>
-             <productQuantity>2500</productQuantity>
-             <productUnit>Packung 1L</productUnit>
-         </product>
-         <product>
-             <productID>00-871895</productID>
-             <productName>Bio Apfelsaft Gold</productName>
-             <productCategory>Getraenk</productCategory>
-             <productQuantity>3420</productQuantity>
-             <productUnit>Packung 1L</productUnit>
-         </product>
-    </productData>
-</warehouseData>
+
+**Controller: MainController.java (User Management)**
+Hier wird gezeigt, wie neue User via POST-Request angelegt werden.
+```java
+@PostMapping(path="/add") 
+public @ResponseBody String addNewUser (@RequestParam String name, @RequestParam String email) {
+   User n = new User();
+   n.setName(name);
+   n.setEmail(email);
+   userRepository.save(n);
+   return "Saved";
+}
 ```
+
+#### Grundlagen: Data Warehouse Modell (Min. 2 Entities, 1 Relation)
+Die XML-Struktur wurde in ein relationales Modell übersetzt. Hierbei wurde eine `@OneToMany` Relation zwischen `Warehouse` und `Product` gewählt.
+
+**Entity: Warehouse.java**
+```java
+@Entity
+public class Warehouse {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String warehouseID; // z.B. "001"
+    private String warehouseName;
+
+    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @JoinColumn(name = "warehouse_internal_id") 
+    private List<Product> productData;
+    // Getter und Setter...
+}
+```
+
+#### Erweiterte Grundlagen: Repository Erweiterungen & CRUD
+Hier wurden spezifische Abfragemethoden im `WarehouseRepository` implementiert, um Daten über die fachliche `warehouseID` zu finden.
+
+**Repository: WarehouseRepository.java**
+```java
+public interface WarehouseRepository extends CrudRepository<Warehouse, Long> {
+    // Collect data specified by datawarehouseID
+    Optional<Warehouse> findByWarehouseID(String warehouseID);
+}
+```
+
+**Controller: WarehouseController.java (Update & Filter Logik)**
+Diese Methoden erfüllen die Anforderung, einzelne Produkte eines Warenhouses zu finden oder ein Warehouse zu aktualisieren.
+```java
+// Ein einzelnes Produkt eines Warenhouses via warehouseID und productID finden
+@GetMapping("/{warehouseID}/product/{productID}")
+public Object getProductFromWarehouse(@PathVariable String warehouseID, @PathVariable String productID) {
+    Warehouse w = warehouseRepository.findByWarehouseID(warehouseID).orElse(null);
+    if (w != null) {
+        return w.getProductData().stream()
+                .filter(p -> p.getProductID().equals(productID))
+                .findFirst().orElse(null);
+    }
+    return "Warehouse not found";
+}
+```
+
+#### Erweiterte Grundlagen: Customer Purchases Modell
+Zusätzlich wurde eine `Purchase`-Entity eingeführt, um Verkäufe (Time, Amount, Location) zu dokumentieren.
+
+**Entity: Purchase.java**
+```java
+@Entity
+public class Purchase {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String dateTime; 
+    private Integer amount;
+    private String warehouseID;
+
+    @ManyToOne
+    private Product product; // Verknüpfung zum verkauften Produkt
+}
+```
+
+#### Vertiefung: Data Seeding (50+ Records)
+In der `Main.java` wurde ein `CommandLineRunner` implementiert, der bei jedem Start die Datenbank bereinigt und die benötigten Testdaten (Produkte und 50 Käufe) automatisch generiert.
+
+**Main.java (Ausschnitt)**
+```java
+@Bean
+public CommandLineRunner demo(PurchaseRepository purchaseRepository, ProductRepository productRepository) {
+    return (args) -> {
+        purchaseRepository.deleteAll();
+        productRepository.deleteAll();
+
+        Product p1 = new Product(); // Beispiel Produkt Erstellung
+        p1.setProductID("P-100");
+        p1.setProductName("Gaming Laptop");
+        productRepository.save(p1);
+
+        for (int i = 0; i < 50; i++) {
+            Purchase purchase = new Purchase();
+            purchase.setAmount((int) (Math.random() * 2) + 1);
+            purchase.setProduct(p1);
+            purchaseRepository.save(purchase);
+        }
+    };
+}
+```
+
+#### Vertiefung: LLM Integration (Ollama / Phi-3)
+Die Anbindung an das lokale Modell `phi3` erfolgt über einen HTTP-POST Request an die Ollama API.
+
+**PredictionController.java**
+Hier werden die Verkaufsdaten aus der Datenbank in einen Text-Prompt umgewandelt und an die KI gesendet.
+```java
+@GetMapping("/warehouse/ai/predict")
+public String predict() {
+    var sales = purchaseRepository.findAll();
+    String prompt = "Analysiere diese Verkaufsdaten und erstelle eine Prognose: " + sales.toString();
+
+    String jsonBody = "{" +
+            "\"model\": \"phi3\"," +
+            "\"prompt\": \"" + prompt + "\"," +
+            "\"stream\": false" +
+            "}";
+
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create("http://localhost:11434/api/generate"))
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+            .build();
+    // HTTP Client send & return response...
+}
+```
+
+### Datenbank-Konfiguration (application.properties)
+Ohne diese Zeilen weiß Spring nicht, wohin die Daten sollen.
+
+```properties
+spring.application.name=demo
+spring.jpa.hibernate.ddl-auto=update
+spring.datasource.url=jdbc:mysql://localhost:3308/example
+spring.datasource.username=root
+spring.datasource.password=root
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+```
+
+---
+
 ## Important Commands. 
 
-*   Use gradle to build the application  
-     `gradle clean`   
-     `gradle bootRun`   
 
-*   Connect to MySQL Shell  
-     `mysqlsh <username>@localhost`   
+| Aktion | Befehl                                                     |
+| :--- |:-----------------------------------------------------------|
+| **App Start** | `./gradlew bootRun` oder durch starten von Main Klasse     |
+| **Ollama Modell laden** | `ollama run phi3` nicht wirklich nötig                     |
+| **API Test (Linux/Mac)** | `curl http://localhost:8080/ai/prediction` oder im Browser |
+---
+
 
 *   MySQL Shell Commands  
-     `show databases; // list all local databases `   
-     `use example;  // switch to a local database "example" `   
-     `show tables;           // list all of current database   `   
-     `create table example;   // create a SQL table with the name "example"   ` 
+    `USE example;`
+`SELECT COUNT(*) FROM purchase;`
+`Select * FROM purchase;`
 
-## Assessment
+-- 1. Alle Daten löschen (falls noch nicht geschehen)
+`SET FOREIGN_KEY_CHECKS = 0;`
+`TRUNCATE TABLE product;`
+`TRUNCATE TABLE warehouse;`
+`SET FOREIGN_KEY_CHECKS = 1;`
 
-- Group size: 1 Person.  
-- Result by protocol and delivery meeting (in English). 
-- Requirements **Grundlagen**. 
-    * Answer the questions below about the ORM framework.  
-    * Use the tutorial ["Accessing data with MySQL"](https://spring.io/guides/gs/accessing-data-mysql) 
-    * Implement the MySQL example with the User database 
-    * Create a new user record (eg. curl -X POST "http://localhost:8080/demo/add" -d "name=John" -d "email=john@example.com")
-    * Document each single development step in your protocol and describe the most important code snippets in few sentences. Furthermore, the output of the application and any problems that occur should be documented in submission document.
-    * Customize the data model for the Data Warehouse application (min. 2 entities with 1 relation).  
-    * Insert following records: 2 Data Warehouse records, 10 Product records.  
-    * Document which parts of the program need to be adapted   
-*  Extended Requirements **Erweiterte Grundlagen**
-   *   Find out which methods are available for the CrudRepository to collect data   
-        https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/CrudRepository.html.    
-   *  Extend the Data Warehouse repository with following functionalities:   
-       * Collect all data of one data warehouse specified by datawarehouseID.  
-       * Collect a single product of a data warehouse specified by datawarehouseID and productID.  
-       * Update a data warehouse using datawarehouseID. 
-   * Document the parts of your project which have to be extend
-   * Extend the data model with data about the customer purchases for a product and warehouse locations (eg. records for sold products like data/time, amount, location/warehouse)
-   * Insert 30 records for sold products
-*  Extended Requirements **Vertiefung**  
-   * Create 250-300 training records (products, purchases)
-   * Connect your application with an LLM (local eg. Ollama, cloud-based eg. Google Gemini) and generate a preview of sales numgers for the all warehouses and products over the coming months.
+-- 2. Den Auto-Increment Zähler manuell auf 1 setzen
+`ALTER TABLE warehouse AUTO_INCREMENT = 1;`
+`ALTER TABLE product AUTO_INCREMENT = 1;`
 
 
 ## Questions
 
-* What is ORM and how is JPA used?  
+* What is ORM and how is JPA used?
+
+ORM (Object-Relational Mapping) ist eine Technik, die eine Brücke zwischen der objektorientierten Welt (Java-Klassen) und der relationalen Welt (Datenbanktabellen) schlägt. Anstatt SQL-Queries manuell zu schreiben, erlaubt ORM dem Entwickler, Datenbankinhalte als Java-Objekte zu behandeln.
+
+JPA (Jakarta Persistence API) ist die standardisierte Schnittstelle (Spezifikation) in Java für ORM. JPA selbst führt keinen Code aus, sondern definiert die Regeln und Annotationen. Ein Framework wie Hibernate fungiert dann als die tatsächliche "Engine" (Implementierung), die diese Regeln umsetzt und die SQL-Befehle im Hintergrund generiert.
+
 * What is the application.properties used for and where must it be stored?  
+
+Die Datei `application.properties` wird in Spring Boot verwendet, um Konfigurationseinstellungen für die Anwendung zu speichern. Hier können Datenbankverbindungsdetails, Serverport, Logging-Level und andere wichtige Parameter definiert werden.
+Die `application.properties`-Datei muss im `src/main/resources`-Verzeichnis des Projekts gespeichert werden, damit Spring Boot sie automatisch laden und verwenden kann.
+
+
 * Which annotations are frequently used for entity types? Which key points must be observed?   
+
+Die häufigsten Annotationen für Entity-Typen in JPA sind:
+@Entity: Markiert eine Klasse als JPA-Entity, die in der Datenbank persistiert wird.
+@Table: Optional, um den Tabellennamen zu spezifizieren (Standard ist der Klassenname).
+@Id: Kennzeichnet das Primärschlüsselfeld.
+@GeneratedValue: Gibt an, dass der Primärschlüssel automatisch generiert wird (z.B. AUTO, IDENTITY).
+@Column: Optional, um Spaltennamen und -eigenschaften zu definieren.
+Beobachtungen:
+Jede Entity-Klasse muss eine eindeutige ID haben, die mit @Id markiert ist.
+Die Klasse muss eine No-Args-Konstruktor haben (entweder explizit oder implizit).
+Die Felder sollten private sein und über Getter/Setter zugänglich gemacht werden.
+Die Klasse sollte mit @Entity annotiert sein, damit sie von JPA erkannt wird.
+
 * What methods do you need for CRUD operations?  
+
+CRUD steht für Create, Read, Update, Delete. In Spring Data JPA werden diese Operationen durch die JpaRepository-Schnittstelle bereitgestellt. Hier sind die wichtigsten Methoden:
+Create: save(S entity) - Speichert ein neues Objekt oder aktualisiert ein bestehendes.
+Read: findById(ID id) - Sucht ein Objekt anhand seiner ID.
+findAll() - Gibt eine Liste aller Objekte zurück.
+Update: save(S entity) - Wie bei Create, aber mit einem bestehenden Objekt (ID muss vorhanden sein).
+Delete: deleteById(ID id) - Löscht ein Objekt anhand seiner ID.
+delete(S entity) - Löscht ein bestimmtes Objekt.
+deleteAll() - Löscht alle Objekte.
+
+
 
 ## Links & Further Resources
 
@@ -113,5 +259,3 @@ Create a GITHUB repository for this project and add the link to it in the commen
    https://vicksheet.medium.com/getting-started-with-hibernate-an-introduction-to-the-orm-framework-for-java-applications-fd97af01b7a6
 * Video:   
    https://www.youtube.com/watch?v=NC-1j1grMPI&ab_channel=ManningPublications
-
-FINAL
