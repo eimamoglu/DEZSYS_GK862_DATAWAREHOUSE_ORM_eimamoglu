@@ -17,7 +17,7 @@ KI-Backend: Ollama mit dem Modell phi3 (Docker Container)
 
 ## Wichtige Codebloecke
 
-#### Grundlagen: Das User-Beispiel (Tutorial-Teil)
+#### Grundlagen: Das User-Beispiel
 In diesem Schritt wurde das initiale Tutorial "Accessing data with MySQL" implementiert.
 
 **Entity: User.java**
@@ -46,7 +46,7 @@ public @ResponseBody String addNewUser (@RequestParam String name, @RequestParam
 }
 ```
 
-#### Grundlagen: Data Warehouse Modell (Min. 2 Entities, 1 Relation)
+#### Grundlagen: Data Warehouse Modell
 Die XML-Struktur wurde in ein relationales Modell übersetzt. Hierbei wurde eine `@OneToMany` Relation zwischen `Warehouse` und `Product` gewählt.
 
 **Entity: Warehouse.java**
@@ -112,7 +112,7 @@ public class Purchase {
 }
 ```
 
-#### Vertiefung: Data Seeding (50+ Records)
+#### Vertiefung: Data Seeding
 In der `Main.java` wurde ein `CommandLineRunner` implementiert, der bei jedem Start die Datenbank bereinigt und die benötigten Testdaten (Produkte und 50 Käufe) automatisch generiert.
 
 **Main.java (Ausschnitt)**
