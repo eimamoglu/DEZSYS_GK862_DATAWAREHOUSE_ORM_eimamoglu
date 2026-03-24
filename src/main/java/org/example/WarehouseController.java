@@ -15,6 +15,9 @@ public class WarehouseController {
     @Autowired
     private PurchaseRepository purchaseRepository;
 
+    @Autowired
+    private ProductRepository productRepository;
+
     @GetMapping("/purchases/all")
     public Iterable<Purchase> getAllPurchases() {
         return purchaseRepository.findAll();
@@ -67,5 +70,9 @@ public class WarehouseController {
                     .orElse(null);
         }
         return "Warehouse not found";
+    }
+    @GetMapping("/products/all")
+    public Iterable<Product> getAllProducts() {
+        return productRepository.findAll();
     }
 }

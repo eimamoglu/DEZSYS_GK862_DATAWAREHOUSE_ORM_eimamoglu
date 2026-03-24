@@ -17,8 +17,9 @@ public class Warehouse {
     private String warehouseCountry;
     private String timestamp;
 
-    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-    @JoinColumn(name = "warehouse_internal_id") // Fremdschlüssel in der Product-Tabelle
+    // Ändere das hier:
+    @OneToMany(cascade = {CascadeType.MERGE, CascadeType.REFRESH}, fetch = FetchType.EAGER)
+    @JoinColumn(name = "warehouse_internal_id")
     private List<Product> productData;
 
     // Getter & Setter

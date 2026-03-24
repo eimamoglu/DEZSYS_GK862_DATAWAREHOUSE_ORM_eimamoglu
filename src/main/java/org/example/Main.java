@@ -5,6 +5,9 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @SpringBootApplication
 public class Main {
 
@@ -14,67 +17,61 @@ public class Main {
     }
 
     @Bean
-    public CommandLineRunner demo(PurchaseRepository purchaseRepository, ProductRepository productRepository) {
+    public CommandLineRunner demo(PurchaseRepository purchaseRepository,
+                                  ProductRepository productRepository,
+                                  WarehouseRepository warehouseRepository) {
         return (args) -> {
-            // 1. Tabellen leeren, damit wir keine ID-Konflikte bekommen
             purchaseRepository.deleteAll();
             productRepository.deleteAll();
+            warehouseRepository.deleteAll();
 
-            System.out.println("Erstelle Stammdaten für Produkte...");
+            // 1. Warehouses erstellen
+            Warehouse w1 = new Warehouse();
+            w1.setWarehouseID("001");
+            w1.setWarehouseName("Linz Bahnhof");
+            w1.setProductData(new ArrayList<>()); // Liste initialisieren
 
-            // 2. Produkte erstellen (Passend zu deiner Product-Klasse)
-            Product p1 = new Product();
-            p1.setProductID("P-100");
-            p1.setProductName("Gaming Laptop");
-            p1.setProductCategory("Hardware");
-            p1.setProductQuantity(15); // Lagerbestand
-            p1.setProductUnit("Stück");
+            Warehouse w2 = new Warehouse();
+            w2.setWarehouseID("002");
+            w2.setWarehouseName("Wien Hauptbahnhof");
+            w2.setProductData(new ArrayList<>());
 
-            Product p2 = new Product();
-            p2.setProductID("P-200");
-            p2.setProductName("Ergonomische Maus");
-            p2.setProductCategory("Zubehör");
-            p2.setProductQuantity(50);
-            p2.setProductUnit("Stück");
+            // 2. Produkte erstellen & ZUWEISEN
+            List<Product> allProducts = new ArrayList<>();
+            for (int i = 1; i <= 10; i++) {
+                Product p = new Product();
+                p.setProductID("P-ID-" + i);
+                p.setProductName("Produkt " + i);
+                p.setProductCategory(i % 2 == 0 ? "Hardware" : "Software");
+                p.setProductQuantity(100 + i);
+                p.setProductUnit("Stück");
 
-            Product p3 = new Product();
-            p3.setProductID("P-300");
-            p3.setProductName("Monitor 27 Zoll");
-            p3.setProductCategory("Hardware");
-            p3.setProductQuantity(10);
-            p3.setProductUnit("Stück");
+                productRepository.save(p);
+                allProducts.add(p);
 
-            productRepository.save(p1);
-            productRepository.save(p2);
-            productRepository.save(p3);
-
-            Product[] myProducts = {p1, p2, p3};
-
-            // 3. 50 Käufe (Purchases) generieren
-            System.out.println("Generiere 50 verknüpfte Transaktionen...");
-            String[] locations = {"Zentrallager Berlin", "Lager Hamburg", "Express München"};
-
-            for (int i = 0; i < 50; i++) {
-                Purchase purchase = new Purchase();
-
-                // Datum generieren (März 2026)
-                int day = (i % 15) + 1;
-                purchase.setDateTime("2026-03-" + (day < 10 ? "0" + day : day) + " 09:15:00");
-
-                // Menge des Kaufs
-                purchase.setAmount((int) (Math.random() * 2) + 1); // Kauft 1-2 Stück
-
-                // Lagerort
-                purchase.setWarehouseID(locations[i % locations.length]);
-
-                // Produkt verknüpfen
-                purchase.setProduct(myProducts[i % myProducts.length]);
-
-                purchaseRepository.save(purchase);
+                // WICHTIG: Hier die Verknüpfung machen!
+                if (i <= 5) {
+                    w1.getProductData().add(p); // Erste 5 zu Linz
+                } else {
+                    w2.getProductData().add(p); // Rest zu Wien
+                }
             }
 
-            System.out.println("Fertig! 50 hochwertige Datensätze gespeichert.");
-            System.out.println("Status: " + purchaseRepository.count() + " Käufe in der DB.");
+            // JETZT die Warehouses mit den verknüpften Produkten speichern
+            warehouseRepository.save(w1);
+            warehouseRepository.save(w2);
+
+            // 3. Käufe (Dein Code bleibt hier gleich...)
+            for (int i = 0; i < 50; i++) {
+                Purchase pur = new Purchase();
+                pur.setAmount((int) (Math.random() * 5) + 1);
+                pur.setDateTime("2026-03-" + ((i % 28) + 1) + " 14:00:00");
+                pur.setWarehouseID(i % 2 == 0 ? "001" : "002");
+                pur.setProduct(allProducts.get(i % allProducts.size()));
+                purchaseRepository.save(pur);
+            }
+
+            System.out.println("✅ Setup abgeschlossen!");
         };
     }
 }
